@@ -3,8 +3,17 @@ import { prisma } from "../lib/prisma";
 import { z } from "zod";
 
 export async function memoriesRoutes(app: FastifyInstance) {
-  app.get("/memories", async () => {
+  /* Incluído a verificação do token válido para todas as rotas de memories,
+  de forma que só serão acessadas quando o usuário estiver autenticado */
+  app.addHook("preHandler", async(req: FastifyRequest) => {
+    await req.jwtVerify();
+  });
+
+  app.get("/memories", async (req: FastifyRequest) => {
     const memories = await prisma.memory.findMany({
+      where: {
+        userId: req.user.sub
+      },
       orderBy: {
         createdAt: "asc"
       }
@@ -19,7 +28,7 @@ export async function memoriesRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get("/memories/:id", async (req: FastifyRequest) => {
+  app.get("/memories/:id", async (req: FastifyRequest, res: FastifyReply) => {
     const paramsSchema = z.object({
       id: z.string().uuid()
     });
@@ -31,6 +40,11 @@ export async function memoriesRoutes(app: FastifyInstance) {
         id
       }
     });
+
+    // Se o usuário não é público e não for o mesmo usuário que está acessando a essa rota, não permitir retornar a memória
+    if (!memory.isPublic && memory.userId !== req.user.sub) {
+      return res.status(401).send();
+    }
 
     return memory;
   });
@@ -49,14 +63,14 @@ export async function memoriesRoutes(app: FastifyInstance) {
         text,
         mediaUrl,
         isPublic,
-        userId: "57eecb7f-0830-476d-a747-f9a256164457"
+        userId: req.user.sub
       }
     });
 
     return memory;
   });
 
-  app.put("/memories/:id", async (req: FastifyRequest) => {
+  app.put("/memories/:id", async (req: FastifyRequest, res: FastifyReply) => {
     const paramsSchema = z.object({
       id: z.string().uuid()
     });
@@ -71,7 +85,16 @@ export async function memoriesRoutes(app: FastifyInstance) {
 
     const { text, mediaUrl, isPublic } = bodySchema.parse(req.body);
 
-    const memory = await prisma.memory.update({
+    let memory = await prisma.memory.findUniqueOrThrow({
+      where: { id }
+    });
+
+    // Se o usuário não for o mesmo usuário que está acessando a essa rota, não permitir retornar a memória
+    if (memory.userId !== req.user.sub) {
+      return res.status(401).send();
+    }
+
+    memory = await prisma.memory.update({
       where: {
         id
       },
@@ -85,12 +108,21 @@ export async function memoriesRoutes(app: FastifyInstance) {
     return memory;
   });
 
-  app.delete("/memories/:id", async (req: FastifyRequest) => {
+  app.delete("/memories/:id", async (req: FastifyRequest, res: FastifyReply) => {
     const paramsSchema = z.object({
       id: z.string().uuid()
     });
 
     const { id } = paramsSchema.parse(req.params);
+
+    const memory = await prisma.memory.findUniqueOrThrow({
+      where: { id }
+    });
+
+    // Se o usuário não for o mesmo usuário que está acessando a essa rota, não permitir retornar a memória
+    if (memory.userId !== req.user.sub) {
+      return res.status(401).send();
+    }
 
     await prisma.memory.delete({
       where: {
