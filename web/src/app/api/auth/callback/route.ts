@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
 
   const cookieExpiresInSeconds = 60 * 60 * 24 * 30; // 1 mês (em segundos)
 
+  // Armazenando token num cookie do navegador
   return NextResponse.redirect(redirectURL, {
     headers: {
       "Set-Cookie": `token=${token}; Path=/; max-age=${cookieExpiresInSeconds};`
