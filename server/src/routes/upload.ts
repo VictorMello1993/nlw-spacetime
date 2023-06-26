@@ -4,9 +4,12 @@ import { createWriteStream } from "node:fs";
 import { extname, resolve } from "node:path";
 import { pipeline } from "node:stream";
 import { promisify } from "node:util";
+import fs from "fs";
+import path from "path";
 
 const FIVE_MB_FILE_SIZE = 5_242_880; // 5Mb
 const IMAGE_OR_VIDEO_MIMETYPE_REGEX = /^(image|video)\/[a-zA-Z]+/;
+const UPLOAD_FOLDER = path.join(__dirname, "..", "..", "uploads");
 
 const pump = promisify(pipeline);
 
@@ -32,6 +35,10 @@ export async function uploadRoutes(app: FastifyInstance) {
     const fileExtension = extname(upload.filename);
 
     const fileName = fileId.concat(fileExtension);
+
+    if (!fs.existsSync(UPLOAD_FOLDER)) {
+      fs.mkdirSync(UPLOAD_FOLDER);
+    }
 
     // Salvando arquivo em disco para pasta uploads, de maneira assíncrona com uso de streaming de dados
     // OBS: não utilizar essa abordagem quando a aplicação estiver rodando em produção!
