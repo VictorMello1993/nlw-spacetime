@@ -2,9 +2,12 @@ import { cookies } from "next/headers";
 import { EmptyMemories } from "../components/EmptyMemories";
 import { api } from "../lib/api";
 import dayjs from "dayjs";
+import ptBR from "dayjs/locale/pt-br";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+
+dayjs.locale(ptBR);
 
 interface Memory {
   id: string;
